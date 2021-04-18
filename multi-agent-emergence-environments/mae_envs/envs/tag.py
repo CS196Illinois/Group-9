@@ -48,7 +48,7 @@ class TrackStatWrapper(gym.Wrapper):
         if self.n_food > 0:
             self.total_food_eaten = np.sum(obs['food_eat'])
 
-        self.in_prep_phase = True
+        self.in_prep_phase = False
 
         return obs
 
@@ -298,7 +298,7 @@ def make_env(n_substeps=15, horizon=80, deterministic_mode=False,
         env.add_module(FloorAttributes(friction=box_floor_friction))
     env.add_module(WorldConstants(gravity=gravity))
     env.reset()
-    keys_self = ['agent_qpos_qvel', 'hider', 'prep_obs']
+    keys_self = ['agent_qpos_qvel', 'hider']
     keys_mask_self = ['mask_aa_obs']
     keys_external = ['agent_qpos_qvel']
     keys_copy = ['you_lock', 'team_lock', 'ramp_you_lock', 'ramp_team_lock']
@@ -314,7 +314,7 @@ def make_env(n_substeps=15, horizon=80, deterministic_mode=False,
     env = TagPlayerWrapper(env, n_it, n_players)
     if restrict_rect is not None:
         env = RestrictAgentsRect(env, restrict_rect=restrict_rect, penalize_objects_out=penalize_objects_out)
-    env = PreparationPhase(env, prep_fraction=prep_fraction)
+   #  env = PreparationPhase(env, prep_fraction=prep_fraction)
     env = DiscretizeActionWrapper(env, 'action_movement')
     if np.max(n_boxes) > 0:
         env = AgentGeomObsMask2D(env, pos_obs_key='box_pos', mask_obs_key='mask_ab_obs',
@@ -378,15 +378,15 @@ def make_env(n_substeps=15, horizon=80, deterministic_mode=False,
     keys_mask_external += ['mask_ab_obs_spoof', 'mask_af_obs_spoof']
     if max_n_agents is not None:
         env = SpoofEntityWrapper(env, max_n_agents, ['agent_qpos_qvel', 'hider', 'prep_obs'], ['mask_aa_obs'])
-    env = LockAllWrapper(env, remove_object_specific_lock=True)
+    # env = LockAllWrapper(env, remove_object_specific_lock=True)
     if not grab_out_of_vision and grab_box:
         env = MaskActionWrapper(env, 'action_pull',
                                 ['mask_ab_obs'] + (['mask_ar_obs'] if n_ramps > 0 else []))
     if not grab_selective and grab_box:
         env = GrabClosestWrapper(env)
-    env = NoActionsInPrepPhase(env, np.arange(n_hiders, n_hiders + n_seekers))
+   #  env = NoActionsInPrepPhase(env, np.arange(n_hiders, n_hiders + n_seekers))
     env = DiscardMujocoExceptionEpisodes(env)
-    env = ConcatenateObsWrapper(env, {'agent_qpos_qvel': ['agent_qpos_qvel', 'hider', 'prep_obs'],
+    env = ConcatenateObsWrapper(env, {'agent_qpos_qvel': ['agent_qpos_qvel', 'hider'],
                                      # 'box_obs': ['box_obs', 'you_lock', 'team_lock', 'obj_lock'],
                                      # 'ramp_obs': ['ramp_obs'] + (['ramp_you_lock', 'ramp_team_lock', 'ramp_obj_lock'] if lock_ramp else [])
                                       })

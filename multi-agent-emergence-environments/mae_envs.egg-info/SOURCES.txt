@@ -12,7 +12,7 @@ mae_envs/envs/box_locking.py
 mae_envs/envs/hide_and_seek.py
 mae_envs/envs/shelter_construction.py
 mae_envs/envs/tag.py
-mae_envs/envs/tag_alt.py
+mae_envs/envs/tag_old.py
 mae_envs/modules/__init__.py
 mae_envs/modules/agents.py
 mae_envs/modules/construction_sites.py

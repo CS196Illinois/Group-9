@@ -19,7 +19,7 @@
             n_substeps: 15,
             horizon: 80,
             scenario: 'randomwalls',
-            prep_fraction: 0.4,
+            prep_fraction: 0.04,
             rew_type: "joint_zero_sum",
             restrict_rect: [0.1, 0.1, 9.9, 9.9],
             p_door_dropout: 0.0,
