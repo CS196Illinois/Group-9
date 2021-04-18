@@ -26,7 +26,95 @@ from mae_envs.modules.world import FloorAttributes, WorldConstants
 from mae_envs.modules.util import (uniform_placement, close_to_other_object_placement,
                                    uniform_placement_middle)
 
+def convert_action_space(env):
+    # Dict(action_movement:Tuple(MultiDiscrete([11 11 11]), MultiDiscrete([11 11 11]), MultiDiscrete([11 11 11]), MultiDiscrete([11 11 11]), MultiDiscrete([11 11 11])))
+    env.action_space = MultiDiscrete([11]*len(env.action_space['action_movement']))
 
+
+def convert_obs_space(env):
+      env.observation_space = Box(np.NINF, np.inf, (4*9 + 30 + 4 + 9, 1), np.float32)
+
+
+class StableBaselineInputWrapper(gym.Wrapper):
+    def __init__(self, env, n_players):
+        super().__init__(env)
+        self.n_players = n_players
+
+    def step(self, action):
+        # convert input action to dict format
+        # OrderedDict([('action_movement', (array([8, 0, 6]), array([10,  8,  3]), array([3, 7, 6]), array([6, 2, 3]), array([0, 9, 6])))])
+
+        true_format = []
+        sub_list = []
+        for sub_action_idx in range(len(action)):
+            val = action[sub_action_idx]
+            if sub_action_idx%3 == 0 and  sub_action_idx!=0:
+                true_format.append(sub_list)
+                sub_list = []
+            sub_list.append(val)
+        true_format.append(sub_list)
+        true_format = [np.array(x) for x in true_format]
+        adj_action = {
+            "action_movement":
+            tuple(true_format)
+        }
+        return self.env.step(adj_action)
+
+class StableBaselineOutputWrapper(gym.Wrapper):
+    def __init__(self, env, n_players):
+        super().__init__(env)
+        self.n_players = n_players
+
+    def step(self, action):
+        # convert input obs space from dict to array 
+        # Dict(
+            #agent_qpos_qvel:Box(-inf, inf, (4, 9), float32), 
+            #lidar:Box(-inf, inf, (30, 1), float32), 
+            #mask_aa_obs:Box(-inf, i nf, (4,), float32), 
+            #observation_self:Box(-inf, inf, (9,), float32))
+        # env.observation_space = Box(np.NINF, np.inf, (4*9 + 30 + 4 + 9, 1), np.float32)
+        obs, rew, done, info = self.env.step(action)
+        # print(obs)
+        #for k,v in obs.items():
+        #    print(k, v.shape)
+
+        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + self.n_players*30, 1))
+        i = 0
+        for val in obs['agent_qpos_qvel'].flatten():
+            adj_obs[i] = val
+            i+=1
+        for val in obs['lidar'].flatten():
+            adj_obs[i] = val
+            i+=1
+        for val in obs['mask_aa_obs'].flatten():
+            adj_obs[i] = val
+            i+=1
+        for val in obs['observation_self'].flatten():
+            adj_obs[i] = val
+            i+=1        
+
+        return adj_obs, rew, done, info
+    
+    def reset(self):
+        obs = self.env.reset()
+        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + self.n_players*30, 1))
+        i = 0
+        for val in obs['agent_qpos_qvel'].flatten():
+            adj_obs[i] = val
+            i+=1
+        for val in obs['lidar'].flatten():
+            adj_obs[i] = val
+            i+=1
+        for val in obs['mask_aa_obs'].flatten():
+            adj_obs[i] = val
+            i+=1
+        for val in obs['observation_self'].flatten():
+            adj_obs[i] = val
+            i+=1        
+
+        return adj_obs
+
+        
 
 class TrackStatWrapper(gym.Wrapper):
     '''
@@ -54,7 +142,7 @@ class TrackStatWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, rew, done, info = self.env.step(action)
-
+        print("STEP CONTENT")
         if self.n_food > 0:
             self.total_food_eaten += np.sum(obs['food_eat'])
 
@@ -134,9 +222,9 @@ class TagPlayerWrapper(gym.Wrapper):
         
         self.tag_timer -= 1 # don't let them tag until 65 timesteps have passed
         self.tag_timer = max(self.tag_timer, 0)
-        #print(obs, rew, self.it_status)
+
         rew = [-1*x for x in self.it_status]
-        print(rew)
+
     
         return self.observation(obs), rew, done, info
 
@@ -392,5 +480,6 @@ def make_env(n_substeps=15, horizon=80, deterministic_mode=False,
                                       })
     env = SelectKeysWrapper(env, keys_self=keys_self,
                             keys_other=keys_external + keys_mask_self + keys_mask_external)
-                            
+    env = StableBaselineInputWrapper(env, n_players)
+    env = StableBaselineOutputWrapper(env, n_players)
     return env
