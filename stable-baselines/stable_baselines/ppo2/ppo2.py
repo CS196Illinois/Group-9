@@ -491,7 +491,6 @@ class Runner(AbstractEnvRunner):
             if isinstance(self.env.action_space, gym.spaces.Box):
                 clipped_actions = np.clip(actions, self.env.action_space.low, self.env.action_space.high)
             # combine actions into single action
-            print(ci)
             self.obs[:], rewards_all, self.dones, infos = self.env.step(clipped_actions)
             
             # split obs and rewards
