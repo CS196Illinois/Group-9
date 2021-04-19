@@ -51,8 +51,8 @@ class StableBaselineInputWrapper(gym.Wrapper):
     def step(self, action):
         # convert input action to dict format
         # OrderedDict([('action_movement', (array([8, 0, 6]), array([10,  8,  3]), array([3, 7, 6]), array([6, 2, 3]), array([0, 9, 6])))])
-        print(action)
-        input("Correct?")
+        # print(action)
+        # input("Correct?")
         obs, rew, done, info = self.env.step(action)
         return 
 

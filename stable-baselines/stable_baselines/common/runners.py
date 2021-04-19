@@ -35,6 +35,7 @@ class AbstractEnvRunner(ABC):
         self.callback = None  # type: Optional[BaseCallback]
         self.continue_training = True
         self.n_envs = n_envs
+        
 
     def run(self, callback: Optional[BaseCallback] = None) -> Any:
         """

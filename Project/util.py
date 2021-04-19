@@ -12,4 +12,4 @@ def convert_obs_space(env):
         #mask_aa_obs:Box(-inf, inf, (4,), float32), 
         #observation_self:Box(-inf, inf, (9,), float32))
     n_players = 5
-    env.observation_space = Box(np.NINF, np.inf, (n_players*9 + n_players*4*9 + n_players*4 + n_players*30, 1), np.float32)
+    env.observation_space = Box(np.NINF, np.inf, (n_players*9 + n_players*4*9 + n_players*4 + n_players*30,), np.float32)

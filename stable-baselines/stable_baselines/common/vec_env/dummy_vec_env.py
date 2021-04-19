@@ -30,18 +30,22 @@ class DummyVecEnv(VecEnv):
             (k, np.zeros((self.num_envs,) + tuple(shapes[k]), dtype=dtypes[k]))
             for k in self.keys])
         self.buf_dones = np.zeros((self.num_envs,), dtype=np.bool)
-        self.buf_rews = np.zeros((self.num_envs,), dtype=np.float32)
+        self.buf_rews = np.zeros((self.num_envs, 5), dtype=np.float32)
         self.buf_infos = [{} for _ in range(self.num_envs)]
         self.actions = None
         self.metadata = env.metadata
+        self.counter = 0
 
     def step_async(self, actions):
         self.actions = actions
 
     def step_wait(self):
         for env_idx in range(self.num_envs):
-            obs, self.buf_rews[env_idx], self.buf_dones[env_idx], self.buf_infos[env_idx] =\
-                self.envs[env_idx].step(self.actions[env_idx])
+            a,b,c,d = self.envs[env_idx].step(self.actions[env_idx])
+            obs = a
+            self.buf_rews[env_idx] = b
+            self.buf_dones[env_idx] = c 
+            self.buf_infos[env_idx] = d
             if self.buf_dones[env_idx]:
                 # save final observation where user can get it, then reset
                 self.buf_infos[env_idx]['terminal_observation'] = obs

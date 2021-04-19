@@ -69,9 +69,10 @@ class BaseRLModel(ABC):
                 if self.verbose >= 1:
                     print("Creating environment from the given name, wrapped in a DummyVecEnv.")
                 self.env = env = DummyVecEnv([lambda: gym.make(env)])
-
-            self.observation_space = env.observation_space
-            self.action_space = env.action_space
+            # manually set obs and action space to be a single agent
+            print("Manually setting observation space (base_class.py ln73)")
+            self.observation_space = gym.spaces.Box(np.NINF, np.inf, (79,), np.float32)
+            self.action_space = gym.spaces.MultiDiscrete([11,11,11])
             if requires_vec_env:
                 if isinstance(env, VecEnv):
                     self.n_envs = env.num_envs

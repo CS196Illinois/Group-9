@@ -6,6 +6,7 @@ from util import convert_action_space, convert_obs_space
 # make sure to pip install stable_baselines
 from stable_baselines import PPO2
 from stable_baselines.common.evaluation import evaluate_policy
+from stable_baselines.common import make_vec_env
 
 # https://stable-baselines.readthedocs.io/en/master/modules/ppo2.html
 
@@ -23,21 +24,6 @@ convert_obs_space(env_alt_space)
 
 model = PPO2('MlpPolicy', env_alt_space, verbose=1)
 # Train the agent
-model.learn(total_timesteps=int(2e5))
+model.learn(total_timesteps=int(2e6))
 # Save the agent
-model.save("PPO2_tag")
-del model  # delete trained model to demonstrate loading
-
-# Load the trained agent
-model = PPO2.load("PPO2_tag")
-
-# Evaluate the agent
-mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=10)
-
-# Enjoy trained agent
-obs = env.reset()
-for i in range(1000):
-    action, _states = model.predict(obs)
-    obs, rewards, dones, info = env.step(action)
-    env.render()
-
+model.save("model_tag")

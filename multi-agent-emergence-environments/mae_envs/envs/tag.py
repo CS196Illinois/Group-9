@@ -43,9 +43,11 @@ class StableBaselineInputWrapper(gym.Wrapper):
     def step(self, action):
         # convert input action to dict format
         # OrderedDict([('action_movement', (array([8, 0, 6]), array([10,  8,  3]), array([3, 7, 6]), array([6, 2, 3]), array([0, 9, 6])))])
-
+        # happens first
         true_format = []
         sub_list = []
+       # print(action)
+       # input("Taking action")
         for sub_action_idx in range(len(action)):
             val = action[sub_action_idx]
             if sub_action_idx%3 == 0 and  sub_action_idx!=0:
@@ -77,8 +79,9 @@ class StableBaselineOutputWrapper(gym.Wrapper):
         # print(obs)
         #for k,v in obs.items():
         #    print(k, v.shape)
-
-        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + self.n_players*30, 1))
+        # happens last
+        # last to run
+        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + self.n_players*30,))
         i = 0
         for val in obs['agent_qpos_qvel'].flatten():
             adj_obs[i] = val
@@ -93,11 +96,13 @@ class StableBaselineOutputWrapper(gym.Wrapper):
             adj_obs[i] = val
             i+=1        
 
-        return adj_obs, rew, done, info
+        #input(f"Maxing Reward {self.env.rew}")
+        # rew = max(self.env.rew)
+        return adj_obs, self.env.rew, done, info
     
     def reset(self):
         obs = self.env.reset()
-        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + self.n_players*30, 1))
+        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + self.n_players*30,))
         i = 0
         for val in obs['agent_qpos_qvel'].flatten():
             adj_obs[i] = val
@@ -142,7 +147,6 @@ class TrackStatWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, rew, done, info = self.env.step(action)
-        print("STEP CONTENT")
         if self.n_food > 0:
             self.total_food_eaten += np.sum(obs['food_eat'])
 
@@ -222,11 +226,11 @@ class TagPlayerWrapper(gym.Wrapper):
         
         self.tag_timer -= 1 # don't let them tag until 65 timesteps have passed
         self.tag_timer = max(self.tag_timer, 0)
-
-        rew = [-1*x for x in self.it_status]
-
+        #print(rew, self.it_status)
+        self.env.rew = [-1*x for x in self.it_status]
+        #input(f"Setting Reward {self.env.rew}")
     
-        return self.observation(obs), rew, done, info
+        return self.observation(obs), self.env.rew, done, info
 
 
 class MaskUnseenAction(gym.Wrapper):

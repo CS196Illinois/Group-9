@@ -53,7 +53,7 @@ class PPO2(ActorCriticRLModel):
     def __init__(self, policy, env, gamma=0.99, n_steps=128, ent_coef=0.01, learning_rate=2.5e-4, vf_coef=0.5,
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, cliprange_vf=None,
                  verbose=0, tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, seed=None, n_cpu_tf_sess=None):
+                 full_tensorboard_log=False, seed=None, n_cpu_tf_sess=None, n_players=5):
 
         self.learning_rate = learning_rate
         self.cliprange = cliprange
@@ -68,7 +68,7 @@ class PPO2(ActorCriticRLModel):
         self.noptepochs = noptepochs
         self.tensorboard_log = tensorboard_log
         self.full_tensorboard_log = full_tensorboard_log
-
+        self.n_players = n_players
         self.action_ph = None
         self.advs_ph = None
         self.rewards_ph = None
@@ -98,7 +98,7 @@ class PPO2(ActorCriticRLModel):
 
     def _make_runner(self):
         return Runner(env=self.env, model=self, n_steps=self.n_steps,
-                      gamma=self.gamma, lam=self.lam)
+                      gamma=self.gamma, lam=self.lam, n_players=self.n_players)
 
     def _get_pretrain_placeholders(self):
         policy = self.act_model
@@ -436,7 +436,7 @@ class PPO2(ActorCriticRLModel):
 
 
 class Runner(AbstractEnvRunner):
-    def __init__(self, *, env, model, n_steps, gamma, lam):
+    def __init__(self, *, env, model, n_steps, gamma, lam, n_players=5):
         """
         A runner to learn the policy of an environment for a model
 
@@ -449,6 +449,7 @@ class Runner(AbstractEnvRunner):
         super().__init__(env=env, model=model, n_steps=n_steps)
         self.lam = lam
         self.gamma = gamma
+        self.n_players = n_players
 
     def _run(self):
         """
@@ -469,18 +470,35 @@ class Runner(AbstractEnvRunner):
         mb_states = self.states
         ep_infos = []
         for _ in range(self.n_steps):
-            actions, values, self.states, neglogpacs = self.model.step(self.obs, self.states, self.dones)
-            mb_obs.append(self.obs.copy())
-            mb_actions.append(actions)
-            mb_values.append(values)
-            mb_neglogpacs.append(neglogpacs)
-            mb_dones.append(self.dones)
+            # split obs into seperate observations of shape 1,79
+            actions = []
+            for i in range(self.n_players):
+                
+                agent_obs = mutli_agent_process_observations(self.obs, self.n_players, i)
+                agent_actions, values, self.states, neglogpacs = self.model.step(agent_obs, self.states, self.dones)
+                mb_obs.append(agent_obs.copy())
+                mb_actions.append(agent_actions)
+                mb_values.append(values)
+                mb_neglogpacs.append(neglogpacs)
+                mb_dones.append(self.dones)
+                actions.append(agent_actions[0])
+
+            actions = multi_agent_process_action(actions)
+            #print(actions)
+            #input("Good?")
             clipped_actions = actions
             # Clip the actions to avoid out of bound error
             if isinstance(self.env.action_space, gym.spaces.Box):
                 clipped_actions = np.clip(actions, self.env.action_space.low, self.env.action_space.high)
-            self.obs[:], rewards, self.dones, infos = self.env.step(clipped_actions)
-
+            # combine actions into single action
+            print(ci)
+            self.obs[:], rewards_all, self.dones, infos = self.env.step(clipped_actions)
+            
+            # split obs and rewards
+            # obs 1, 395 -> n, 79
+            # rewards needs to be split
+            # dones needs to be split
+     
             self.model.num_timesteps += self.n_envs
 
             if self.callback is not None:
@@ -495,7 +513,7 @@ class Runner(AbstractEnvRunner):
                 maybe_ep_info = info.get('episode')
                 if maybe_ep_info is not None:
                     ep_infos.append(maybe_ep_info)
-            mb_rewards.append(rewards)
+            [mb_rewards.append([reward]) for reward in rewards_all[0]]
         # batch of steps to batch of rollouts
         mb_obs = np.asarray(mb_obs, dtype=self.obs.dtype)
         mb_rewards = np.asarray(mb_rewards, dtype=np.float32)
@@ -503,7 +521,7 @@ class Runner(AbstractEnvRunner):
         mb_values = np.asarray(mb_values, dtype=np.float32)
         mb_neglogpacs = np.asarray(mb_neglogpacs, dtype=np.float32)
         mb_dones = np.asarray(mb_dones, dtype=np.bool)
-        last_values = self.model.value(self.obs, self.states, self.dones)
+        last_values = self.model.value(mutli_agent_process_observations(self.obs, self.n_players, 0), self.states, self.dones)
         # discount/bootstrap off value fn
         mb_advs = np.zeros_like(mb_rewards)
         true_reward = np.copy(mb_rewards)
@@ -535,3 +553,39 @@ def swap_and_flatten(arr):
     """
     shape = arr.shape
     return arr.swapaxes(0, 1).reshape(shape[0] * shape[1], *shape[2:])
+
+def multi_agent_process_action(arr):
+    
+    comb_action = np.zeros((len(arr)*len(arr[0])))
+    i = 0
+    for agent_action in arr:
+        for action in agent_action:
+            comb_action[i] = action
+            i+=1
+    return [list(comb_action)]
+
+def mutli_agent_process_observations(obs, n_players, i):
+    #print(obs.shape)
+    #input(f"Obs! {n_players}, {i}")
+    obs = obs[0]
+    
+    o1 = n_players*9*4
+    o2 = n_players*30
+    o3 = n_players*4
+    o4 = n_players*9
+    agent_qpos_qvel = obs[:o1]
+    lidar = obs[o1:o1+o2]
+    mask_aa_obs = obs[o1+o2:o1+o2+o3]
+    observation_self = obs[o1+o2+o3:o1+o2+o3+o4]
+
+    agent_i_qpos_qvel = agent_qpos_qvel[9*4*i:9*4*(i+1)]
+    lidar_i = lidar[30*i:30*(i+1)]
+    mask_aa_obs_i = mask_aa_obs[4*i:4*(i+1)]
+    observation_self_i = observation_self[9*i:9*(i+1)]
+
+    ret_arr = np.concatenate([agent_i_qpos_qvel,lidar_i, mask_aa_obs_i, observation_self_i])
+    # ret_arr = np.pad(ret_arr, (0, 395-len(ret_arr)), 'constant')
+    ret_arr = np.array([ret_arr])
+    #print(ret_arr.shape) 
+    #input("Waiting!")
+    return ret_arr
