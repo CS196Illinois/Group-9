@@ -21,9 +21,9 @@ env, args_remaining = load_env(
 env_alt_space = copy.deepcopy(env)
 convert_action_space(env_alt_space)
 convert_obs_space(env_alt_space)
-
-model = PPO2('MlpPolicy', env_alt_space, verbose=1)
+ # input(f"{env_alt_space.observation_space.shape}")
+model = PPO2('MlpPolicy', env_alt_space, verbose=1, tensorboard_log="./tensorboard_log", policy_kwargs={'net_arch': [256, dict(vf=[256, 256], pi=[32, 32])]})
 # Train the agent
-model.learn(total_timesteps=int(2e6))
+model.learn(total_timesteps=int(4e6))
 # Save the agent
-model.save("model_tag")
+model.save("lg_model_tag_2e6_2")

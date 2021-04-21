@@ -38,7 +38,7 @@ def convert_obs_space(env):
         #mask_aa_obs:Box(-inf, inf, (4,), float32), 
         #observation_self:Box(-inf, inf, (9,), float32))
 
-    print(env.observation_space)
+    # print(env.observation_space)
     env.observation_space = Box(np.NINF, np.inf, (4*9 + 30 + 4 + 9, 1), np.float32)
 
 
@@ -172,7 +172,7 @@ class TagPlayerWrapper(gym.Wrapper):
         self.tag_timer = max(self.tag_timer, 0)
         #print(obs, rew, self.it_status)
         rew = [-1*x for x in self.it_status]
-        print(rew)
+        # print(rew)
     
         return self.observation(obs), rew, done, info
 

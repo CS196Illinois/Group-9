@@ -81,8 +81,10 @@ class StableBaselineOutputWrapper(gym.Wrapper):
         #    print(k, v.shape)
         # happens last
         # last to run
-        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + self.n_players*30,))
+        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + \
+        self.n_players*30 + self.n_players + self.n_players*3,))
         i = 0
+        # print(obs)
         for val in obs['agent_qpos_qvel'].flatten():
             adj_obs[i] = val
             i+=1
@@ -94,15 +96,22 @@ class StableBaselineOutputWrapper(gym.Wrapper):
             i+=1
         for val in obs['observation_self'].flatten():
             adj_obs[i] = val
-            i+=1        
+            i+=1
+        for val in self.it_mask.flatten():
+            adj_obs[i] = val
+            i+=1 
+        for val in self.it_loc.flatten():
+            adj_obs[i] = val    
+            i+=1   
 
-        #input(f"Maxing Reward {self.env.rew}")
-        # rew = max(self.env.rew)
-        return adj_obs, self.env.rew, done, info
-    
+            #input(f"Maxing Reward {self.env.rew}")
+            # rew = max(self.env.rew)
+            return adj_obs, self.env.rew, done, info
+        
     def reset(self):
         obs = self.env.reset()
-        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + self.n_players*30,))
+        adj_obs = np.zeros((self.n_players*9 + self.n_players*4*9 + self.n_players*4 + \
+        self.n_players*30+ self.n_players + self.n_players*3,))
         i = 0
         for val in obs['agent_qpos_qvel'].flatten():
             adj_obs[i] = val
@@ -116,7 +125,12 @@ class StableBaselineOutputWrapper(gym.Wrapper):
         for val in obs['observation_self'].flatten():
             adj_obs[i] = val
             i+=1        
-
+        for val in self.it_mask.flatten():
+            adj_obs[i] = val
+            i+=1 
+        for val in self.it_loc.flatten():
+            adj_obs[i] = val
+            i+=1   
         return adj_obs
 
         
@@ -207,8 +221,16 @@ class TagPlayerWrapper(gym.Wrapper):
         
     def observation(self, obs):
         # add relavent info to obs
-        obs['it']=np.expand_dims(self.it_status, -1) # whether or not the player is it
-        obs['it_loc'] = np.array([obs['agent_pos'][agent_idx] for agent_idx in range(len(obs['agent_pos'])) if self.it_status[agent_idx] for i in range(len(self.it_status))])
+        self.it_mask =np.expand_dims(self.it_status, -1) # whether or not the player is it
+        self.it_loc= np.array([obs['agent_pos'][agent_idx] for agent_idx in range(len(obs['agent_pos'])) if self.it_status[agent_idx] for i in range(len(self.it_status))])
+
+        return obs
+
+    def reset(self):
+        obs = self.env.reset()
+
+        self.it_mask =np.expand_dims(self.it_status, -1) # whether or not the player is it
+        self.it_loc= np.array([obs['agent_pos'][agent_idx] for agent_idx in range(len(obs['agent_pos'])) if self.it_status[agent_idx] for i in range(len(self.it_status))])
 
         return obs
 

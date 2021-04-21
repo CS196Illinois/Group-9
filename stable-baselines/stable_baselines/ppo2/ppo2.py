@@ -382,11 +382,11 @@ class PPO2(ActorCriticRLModel):
                 t_now = time.time()
                 fps = int(self.n_batch / (t_now - t_start))
 
-                if writer is not None:
-                    total_episode_reward_logger(self.episode_reward,
-                                                true_reward.reshape((self.n_envs, self.n_steps)),
-                                                masks.reshape((self.n_envs, self.n_steps)),
-                                                writer, self.num_timesteps)
+                # if writer is not None:
+                #     total_episode_reward_logger(self.episode_reward,
+                #                                 true_reward.reshape((self.n_envs, self.n_steps)),
+                #                                 masks.reshape((self.n_envs, self.n_steps)),
+                #                                 writer, self.num_timesteps)
 
                 if self.verbose >= 1 and (update % log_interval == 0 or update == 1):
                     explained_var = explained_variance(values, returns)
@@ -475,6 +475,8 @@ class Runner(AbstractEnvRunner):
             for i in range(self.n_players):
                 
                 agent_obs = mutli_agent_process_observations(self.obs, self.n_players, i)
+                # print(self.obs)
+                # print(agent_obs.shape)
                 agent_actions, values, self.states, neglogpacs = self.model.step(agent_obs, self.states, self.dones)
                 mb_obs.append(agent_obs.copy())
                 mb_actions.append(agent_actions)
@@ -572,17 +574,23 @@ def mutli_agent_process_observations(obs, n_players, i):
     o2 = n_players*30
     o3 = n_players*4
     o4 = n_players*9
+    o5 = n_players
+    o6 = n_players * 3
     agent_qpos_qvel = obs[:o1]
     lidar = obs[o1:o1+o2]
     mask_aa_obs = obs[o1+o2:o1+o2+o3]
     observation_self = obs[o1+o2+o3:o1+o2+o3+o4]
+    it_mask = obs[o1+o2+o3+o4:o1+o2+o3+o4+o5]
+    it_loc = obs[o1+o2+o3+o4+o5:o1+o2+o3+o4+o5+o6]
 
     agent_i_qpos_qvel = agent_qpos_qvel[9*4*i:9*4*(i+1)]
     lidar_i = lidar[30*i:30*(i+1)]
     mask_aa_obs_i = mask_aa_obs[4*i:4*(i+1)]
     observation_self_i = observation_self[9*i:9*(i+1)]
+    it_mask_i = it_mask[i]
+    it_loc_i = it_loc[3*i:3*(i+1)]
 
-    ret_arr = np.concatenate([agent_i_qpos_qvel,lidar_i, mask_aa_obs_i, observation_self_i])
+    ret_arr = np.concatenate([agent_i_qpos_qvel,lidar_i, mask_aa_obs_i, observation_self_i, [it_mask_i], it_loc_i])
     # ret_arr = np.pad(ret_arr, (0, 395-len(ret_arr)), 'constant')
     ret_arr = np.array([ret_arr])
     #print(ret_arr.shape) 

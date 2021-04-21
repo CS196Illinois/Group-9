@@ -23,15 +23,22 @@ def mutli_agent_process_observations(obs, n_players, i):
     o2 = n_players*30
     o3 = n_players*4
     o4 = n_players*9
+    o5 = n_players
+    o6 = n_players * 3
     agent_qpos_qvel = obs[:o1]
     lidar = obs[o1:o1+o2]
     mask_aa_obs = obs[o1+o2:o1+o2+o3]
     observation_self = obs[o1+o2+o3:o1+o2+o3+o4]
+    it_mask = obs[o1+o2+o3+o4:o1+o2+o3+o4+o5]
+    it_loc = obs[o1+o2+o3+o4+o5:o1+o2+o3+o4+o5+o6]
 
     agent_i_qpos_qvel = agent_qpos_qvel[9*4*i:9*4*(i+1)]
     lidar_i = lidar[30*i:30*(i+1)]
     mask_aa_obs_i = mask_aa_obs[4*i:4*(i+1)]
     observation_self_i = observation_self[9*i:9*(i+1)]
+    it_mask_i = it_mask[i]
+    it_loc_i = it_loc[3*i:3*(i+1)]
+
 
     ret_arr = np.concatenate([agent_i_qpos_qvel,lidar_i, mask_aa_obs_i, observation_self_i])
     # ret_arr = np.pad(ret_arr, (0, 395-len(ret_arr)), 'constant')
@@ -40,7 +47,7 @@ def mutli_agent_process_observations(obs, n_players, i):
     #input("Waiting!")
     return ret_arr
 
-model = PPO2.load("model_tag")
+model = PPO2.load("model_tag_2e6.zip")
 
 env, args_remaining = load_env(
     "/home/weustis/Group-9/multi-agent-emergence-environments/examples/tag.jsonnet",    # change this 
@@ -74,6 +81,6 @@ while (True):
     if rewards != last_rew:
         print(f"Player {np.argmin(last_rew)} tagged Player {np.argmin(rewards)}!")
     last_rew = rewards
-    
+
     env.render()
 
