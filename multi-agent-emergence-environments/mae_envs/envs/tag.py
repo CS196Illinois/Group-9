@@ -241,12 +241,12 @@ class TagPlayerWrapper(gym.Wrapper):
             for position_idx in range(len(obs['agent_pos'])): 
                 position = obs['agent_pos'][position_idx]
                 distance = dist(it_pos, position)
-                if distance <= .5 and distance>0 and self.tag_timer  == 0:
+                if distance <= .25 and distance>0 and self.tag_timer  == 0:
                     self.it_status = [0]*len(self.it_status)
                     self.it_status[position_idx] = 1
                     self.tag_timer = 15*5
         
-        self.tag_timer -= 1 # don't let them tag until 65 timesteps have passed
+        self.tag_timer -= 1 # don't let them tag until 75 timesteps have passed
         self.tag_timer = max(self.tag_timer, 0)
         #print(rew, self.it_status)
         self.env.rew = [-1*x for x in self.it_status]
