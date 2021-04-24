@@ -214,7 +214,8 @@ class TagPlayerWrapper(gym.Wrapper):
     '''
     def __init__(self, env, n_it, n_agents):
         super().__init__(env)
-        self.it_status = [1]*n_it + [0]*(n_agents-n_it) 
+        self.it_status = [0]*(n_agents) 
+        self.it_status[np.random.choice(range(len(self.it_status)))] = 1
         self.tag_timer = 0
         # self.last_it_stauts = self.it_status
         print("Initializing TagPlayerWrapper") 
@@ -241,17 +242,19 @@ class TagPlayerWrapper(gym.Wrapper):
             for position_idx in range(len(obs['agent_pos'])): 
                 position = obs['agent_pos'][position_idx]
                 distance = dist(it_pos, position)
-                if distance <= .25 and distance>0 and self.tag_timer  == 0:
+                if distance <= .33 and distance>.1 and self.tag_timer == 0:
+                    print(f"P{np.argmax(self.it_status)} tag P{position_idx}")
                     self.it_status = [0]*len(self.it_status)
                     self.it_status[position_idx] = 1
-                    self.tag_timer = 15*5
+                    self.tag_timer = 15*4
+                    
         
         self.tag_timer -= 1 # don't let them tag until 75 timesteps have passed
         self.tag_timer = max(self.tag_timer, 0)
         #print(rew, self.it_status)
         self.env.rew = [-1*x for x in self.it_status]
         #input(f"Setting Reward {self.env.rew}")
-    
+      #   self.env.rew = (sum(x) for x in zip(self.env.reward, self.env.outside_rect)
         return self.observation(obs), self.env.rew, done, info
 
 
@@ -351,7 +354,7 @@ def make_env(n_substeps=15, horizon=80, deterministic_mode=False,
                deterministic_mode=deterministic_mode)
 
     env.add_module(RandomWalls(
-        grid_size=grid_size, num_rooms=7,
+        grid_size=grid_size, num_rooms=2,
         random_room_number=random_room_number, min_room_size=2,
         door_size=door_size,
         prob_outside_walls=prob_outside_walls, gen_door_obs=False))

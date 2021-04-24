@@ -13,7 +13,7 @@ class RestrictAgentsRect(gym.RewardWrapper):
             penalize_objects_out (bool): If true, penalizes all agents whenever an object is
                 outside the specified area.
     '''
-    def __init__(self, env, restrict_rect, reward_scale=10., penalize_objects_out=False):
+    def __init__(self, env, restrict_rect, reward_scale=1., penalize_objects_out=False):
         super().__init__(env)
         self.n_agents = self.unwrapped.n_agents
         self.restrict_rect = np.array(restrict_rect)
@@ -28,6 +28,7 @@ class RestrictAgentsRect(gym.RewardWrapper):
 
         self.rect_size = np.array([restrict_rect[2] - restrict_rect[0],
                                    restrict_rect[3] - restrict_rect[1]])
+        self.env = env
 
     def reset(self):
         obs = self.env.reset()
@@ -42,14 +43,19 @@ class RestrictAgentsRect(gym.RewardWrapper):
         return obs
 
     def reward(self, reward):
+        reward = [0] * self.n_agents
         sim = self.unwrapped.sim
         agent_pos = sim.data.body_xpos[self.agent_body_idxs, :2]
         outside_rect = np.any(np.abs(agent_pos - self.rect_middle) > (self.rect_size / 2), axis=1)
+        #print(agent_pos)
         if self.penalize_objects_out:
             obj_pos = sim.data.body_xpos[self.obj_body_idxs, :2]
             any_obj_outside_rect = np.any(np.abs(obj_pos - self.rect_middle) > (self.rect_size / 2))
             if any_obj_outside_rect:
                 reward[:] = - self.reward_scale
-
-        reward = np.array([reward[idx]-self.reward_scale for idx in range(len(reward)) if outside_rect[idx]])
+        #print(range(len(reward)))
+        reward = np.array([reward[idx]-self.reward_scale if outside_rect[idx] else reward[idx] for idx in range(len(reward))])
+        #print(self.env.rew, reward)
+        reward = [sum(x) for x in zip(self.env.rew, reward)]
+        #print(reward)
         return reward

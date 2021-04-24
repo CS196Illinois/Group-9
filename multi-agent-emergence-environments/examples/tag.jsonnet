@@ -17,11 +17,11 @@
 
             # Scenario
             n_substeps: 15,
-            horizon: 800,
+            horizon: 2400,
             scenario: 'randomwalls',
-            prep_fraction: 0.04,
+            prep_fraction: 0.00,
             rew_type: "joint_zero_sum",
-            restrict_rect: [0.1, 0.1, 5.9, 5.9],
+            restrict_rect: [0.5, 0.5, 5.5, 5.5],
             p_door_dropout: 0.0,
             quadrant_game_hider_uniform_placement: true,
 
